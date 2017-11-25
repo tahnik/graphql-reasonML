@@ -1,0 +1,29 @@
+{
+  "name": "graphql-reason",
+  "version": "0.0.1",
+  "description": "A GraphQL Compiler Using Reason",
+  "main": "index.js",
+  "dependencies": {
+    "bs-platform": "^2.1.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "build": "bsb",
+    "start": "bsb -w",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tahnik/graphql-reason.git"
+  },
+  "keywords": [
+    "reason",
+    "graphQL"
+  ],
+  "author": "Tahnik Mustasin",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/tahnik/graphql-reason/issues"
+  },
+  "homepage": "https://github.com/tahnik/graphql-reason#readme"
+}
