@@ -1,2 +1,3 @@
-# graphql-compiler
-A Client-side GraphQL Compiler Using Reason
+# Graphql Compiler Using Reason
+
+Title says it all
