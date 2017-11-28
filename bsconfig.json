@@ -4,9 +4,7 @@
   "sources": [
     "src"
   ],
-  "package-specs": {
-    "module": "commonjs"
-  },
+  "package-specs": ["commonjs"],
   "suffix": ".bs.js",
   "bs-dependencies": [
   ],

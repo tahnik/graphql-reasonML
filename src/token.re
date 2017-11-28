@@ -1,0 +1,4 @@
+type token = {
+  .
+  kind: string
+}
