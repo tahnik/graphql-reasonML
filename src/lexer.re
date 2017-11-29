@@ -1,10 +1,28 @@
-type tesla = {
-  .
-  drive: int
+
+type token = {
+  tokenType: string,
+  value: string
 };
 
-let obj: tesla = {
-  val hasEnvy = ref(false);
-  pub drive = 9;
-  pri enableEnvy = (envy) => hasEnvy := envy
+let lexer = {
+  val index = ref(0);
+  val firstTime = ref(true);
+  val input = ref("");
+
+  pri getNextIndex = () => {
+    switch firstTime^ {
+      | true => { firstTime := false; index^; }
+      | false => { index := index^ + 1; index^; }
+    };
+  };
+
+  pri getNextToken = () : token => {
+    let index = this#getNextIndex();
+    { tokenType: "", value: "" };
+  };
+
+  pub setInput = (inputText: string) => {
+    input := inputText;
+  };
 };
+
