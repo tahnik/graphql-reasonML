@@ -18,6 +18,8 @@ let lexer = {
 
   pri getNextToken = () : token => {
     let index = this#getNextIndex();
+    let token = input^.[index];
+    List.find((a) => { a == input^ }, TokenTypes.separators);
     { tokenType: "", value: "" };
   };
 
