@@ -18,9 +18,20 @@ let int = "int";
 let float = "float";
 let string = "string";
 let comment = "comment";
+let space = " ";
+let newLine = "\n";
 
 let separators = [
   brace_l,
   brace_r,
-  colon
+  paren_l,
+  paren_r,
+  colon,
+  space,
+  newLine
+];
+
+let edibleSeparators = [
+  space,
+  newLine
 ];
