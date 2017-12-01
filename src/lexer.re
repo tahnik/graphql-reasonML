@@ -40,11 +40,9 @@ let lexer = {
         } else if (tokenable && token^ !== "") {
           this#setNextIndex(index - 1);
           nextTokenFound := true;
-        }
-        else if (edible && token^ !== "") {
+        } else if (edible && token^ !== "") {
           nextTokenFound := true;
-        } 
-        else if (tokenable) {
+        } else if (tokenable) {
           token := token^ ++ subStr;
           nextTokenFound := true;
         }
