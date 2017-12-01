@@ -25,7 +25,13 @@ let lexer = {
     let nextTokenFound = ref(false);
     while (!nextTokenFound^) {
       let index = this#getNextIndex();
-      let subStr = String.sub(input^, index, 1);
+      let subStr = try(String.sub(input^, index, 1)) {
+        | Invalid_argument(err) => ""
+      };
+      if (subStr === "") {
+        this#setNextIndex(index - 1);
+        raise(Not_found);
+      };
       let result = try(List.find((a) => { a == subStr }, TokenTypes.separators)) {
         | Not_found => ""
       };
@@ -66,6 +72,10 @@ lexer#setInput("{
   }
 }");
 
-for (x in 5 downto 0) {
-  lexer#getNextToken();
+let endOfTokens = ref(false);
+while (!endOfTokens^) {
+  switch (lexer#getNextToken()) {
+  | _ => { endOfTokens := false; }
+  | exception Not_found => { endOfTokens := true; }
+  };
 };
