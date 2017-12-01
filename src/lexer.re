@@ -33,24 +33,19 @@ let lexer = {
         nextTokenFound := true;
         token := "";
       } else {
-        let result = try(List.find((a) => { a == subStr }, TokenTypes.separators)) {
-          | Not_found => ""
-        };
-        let edibles = ref("");
-        if (result !== "") {
-          edibles := try(List.find((a) => { a == result }, TokenTypes.edibleSeparators)) {
-            | Not_found => ""
-          };
-        };
-        if (result === "") {
+        let tokenable = List.exists((a) => { a == subStr }, TokenTypes.separators);
+        let edible = List.exists((a) => { a == subStr }, TokenTypes.edibleSeparators);
+        if (!tokenable && !edible) {
           token := token^ ++ subStr;
-        } else if (edibles^ === "" && token^ === "") {
-          token := token^ ++ subStr;
-          nextTokenFound := true;
-        } else if (edibles^ === "") {
+        } else if (tokenable && token^ !== "") {
           this#setNextIndex(index - 1);
           nextTokenFound := true;
-        } else if (edibles^ !== "" && token^ !== "") {
+        }
+        else if (edible && token^ !== "") {
+          nextTokenFound := true;
+        } 
+        else if (tokenable) {
+          token := token^ ++ subStr;
           nextTokenFound := true;
         }
       };
@@ -60,7 +55,7 @@ let lexer = {
 
   pub setInput = (inputText: string) => {
     input := inputText;
-    Js.log("Input is: " ++ input^ ++ "\n");
+    index := 0;
   };
 };
 

@@ -26,9 +26,7 @@ let separators = [
   brace_r,
   paren_l,
   paren_r,
-  colon,
-  space,
-  newLine
+  colon
 ];
 
 let edibleSeparators = [
