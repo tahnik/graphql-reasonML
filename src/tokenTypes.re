@@ -1,3 +1,9 @@
+type tokenType = {
+  tokenType: string,
+  value: string,
+  tokenClass: string
+};
+
 let sof = "<sof>";
 let eof = "<eof>";
 let bang = "!";
