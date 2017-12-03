@@ -4,7 +4,7 @@ type token = {
   value: string
 };
 
-let lexer = {
+let tokenizer = {
   val index = ref(0);
   val firstTime = ref(true);
   val input = ref("");
