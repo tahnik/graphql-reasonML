@@ -58,3 +58,5 @@ typings/
 .env
 lib
 .merlin
+
+.bsb.lock
