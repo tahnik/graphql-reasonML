@@ -1,7 +1,13 @@
-type tokenType = {
-  tokenType: string,
-  value: string,
-  tokenClass: string
+type tokenClass = 
+  | LexicalTokens
+  | IgnoredTokens
+  | Punctuators;
+
+type token = {
+  class_: tokenClass,
+  value_: string,
+  line_: int,
+  position_: int
 };
 
 let sof = "<sof>";

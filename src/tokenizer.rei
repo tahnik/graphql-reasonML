@@ -1,0 +1,1 @@
+let setInput: string => unit;
