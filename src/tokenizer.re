@@ -19,6 +19,13 @@ type token = {
   next_: option(token)
 };
 
+<<<<<<< HEAD
+=======
+let tokenizer = {
+  val index = ref(0);
+  val firstTime = ref(true);
+  val input = ref("");
+>>>>>>> 1394401233e7e847ebc6730e8fe6b06f018ad41f
 
 let index = ref(0);
 let firstTime = ref(true);
