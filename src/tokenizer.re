@@ -1,29 +1,52 @@
+type punctuators = 
+  | Bang
+  | Dollar
+  | LeftParen
+  | RightParen
+  | Spread
+  | Colon
+  | Equal
+  | At
+  | LeftBracket
+  | RightBracket
+  | Pipe
+  | LeftBrace
+  | RightBrace;
 
 type tokenType = 
   | WhiteSpace
   | LineTerminators
   | Comments
-  | Punctuator
+  | Punctuator(punctuators)
   | Name
   | IntValue
   | FloatValue
-  | StringValue;
-
+  | StringValue
+  | Comma
+  | EOF
+  | Undetermined;
 
 type token = {
   type_: tokenType,
-  value_: string,
   line_: int,
   position_: int,
-  prev_: token,
-  next_: option(token)
+  /* prev_: token, */
+  /* next_: option(token) */
 };
+
+let ignoredToken = [
+  WhiteSpace,
+  LineTerminators,
+  Comments,
+  Comma
+];
 
 let index = ref(0);
 let firstTime = ref(true);
 let input = ref("");
+let line = ref(1);
 
-/* let getNextIndex = () => {
+let getNextIndex = () => {
   switch firstTime^ {
     | true => { firstTime := false; index^; }
     | false => { index := index^ + 1; index^; }
@@ -34,38 +57,28 @@ let setNextIndex = (nextIndex: int) => {
   index := nextIndex;
 };
 
-let getNextToken = () : option(token) => {
-  let token = ref("");
-  let nextTokenFound = ref(false);
-  while (!nextTokenFound^) {
-    let index = getNextIndex();
-    let subStr = try(String.sub(input^, index, 1)) {
-      | Invalid_argument(err) => ""
-    };
-    if (subStr === "") {
-      setNextIndex(index - 1);
-      nextTokenFound := true;
-      token := "";
-    } else {
-      let tokenable = List.exists((a) => { a == subStr }, TokenTypes.separators);
-      let edible = List.exists((a) => { a == subStr }, TokenTypes.edibleSeparators);
-      if (!tokenable && !edible) {
-        token := token^ ++ subStr;
-      } else if (tokenable && token^ !== "") {
-        setNextIndex(index - 1);
-        nextTokenFound := true;
-      } else if (edible && token^ !== "") {
-        nextTokenFound := true;
-      } else if (tokenable) {
-        token := token^ ++ subStr;
-        nextTokenFound := true;
-      }
-    };
+let getNextToken = (prevToken: option(token)) : option(token) => {
+  switch(prevToken) {
+  | Some(token) => setNextIndex(token.position_)
+  | _ => ()
   };
-  token^ === "" ? None : Some({ type_: "", value_: token^ });
-}; */
+  let currentToken = { type_: Undetermined, line_: line^, position_: index^ + 1};
+  let nextTokenFound = ref(false);
+
+  let firstChar = try(String.sub(input^, index^, 1)) {
+    | Invalid_argument(_err) => ""
+  };
+
+  switch(firstChar) {
+  | "{" => Some({...currentToken, type_: Punctuator(LeftBrace)})
+  | "}" => Some({...currentToken, type_: Punctuator(RightBrace)})
+  | "" => Some({...currentToken, type_: EOF })
+  | _ => None
+  };
+};
 
 let setInput = (inputText: string) => {
   input := inputText;
   index := 0;
 };
+
