@@ -1,8 +1,8 @@
-Tokenizer.setInput("{}");
+Lexer.setInput("{}");
 let endOfTokens = ref(false);
 let prevToken = ref(None);
 while (!endOfTokens^) {
-  switch(Tokenizer.getNextToken(prevToken^)) {
+  switch(Lexer.getNextToken(prevToken^)) {
   | Some(token) => {
       Js.log(token);
       prevToken := Some(token);
