@@ -1,4 +1,3 @@
-
 Tokenizer.setInput("{}");
 let endOfTokens = ref(false);
 let prevToken = ref(None);
