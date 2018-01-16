@@ -15,8 +15,8 @@ type punctuators =
 
 type tokenType = 
   | WhiteSpace
-  | LineTerminators
-  | Comments
+  | LineTerminator
+  | Comment
   | Punctuator(punctuators)
   | Name
   | IntValue
@@ -36,8 +36,8 @@ type token = {
 
 let ignoredToken = [
   WhiteSpace,
-  LineTerminators,
-  Comments,
+  LineTerminator,
+  Comment,
   Comma
 ];
 
@@ -64,14 +64,25 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
   };
   let currentToken = { type_: Undetermined, line_: line^, position_: index^ + 1};
 
-  let firstChar = try(String.sub(input^, index^, 1)) {
-    | Invalid_argument(_err) => ""
+  let tokenVal = try(String.sub(input^, index^, 1)) {
+  | Invalid_argument(_err) => ""
   };
 
-  switch(firstChar) {
-  | "{" => Some({...currentToken, type_: Punctuator(LeftBrace)})
-  | "}" => Some({...currentToken, type_: Punctuator(RightBrace)})
-  | "" => Some({...currentToken, type_: EOF })
+  let charCode = try(Char.code(tokenVal.[0])) {
+  | Invalid_argument(_err) => -1
+  };
+
+  switch(charCode) {
+  /* # */
+  | 35  => {
+    
+    Some({ ...currentToken, type_: Punctuator(Bang) })
+  }
+  /* ! */
+  | 33  => Some({ ...currentToken, type_: Punctuator(Bang) })
+  | 123 => Some({ ...currentToken, type_: Punctuator(LeftBrace) })
+  | 125 => Some({ ...currentToken, type_: Punctuator(RightBrace) })
+  | -1  => Some({ ...currentToken, type_: EOF } )
   | _ => None
   };
 };
