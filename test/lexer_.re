@@ -1,5 +1,9 @@
 Lexer.setInput("{
   # this is a comment
+  friend {
+    name,
+    photo
+  }
 }");
 let endOfTokens = ref(false);
 let prevToken = ref(None);
