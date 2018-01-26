@@ -26,6 +26,7 @@ type tokenType =
   | StringValue
   | Comma
   | EOF
+  | Ampersand
   | Undetermined;
 
 type token = {
@@ -117,6 +118,19 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
   };
 
   switch(code) {
+  /* ! */
+  | 33 => Some({ ...currentToken, type_: Punctuator(Bang) })
+  /*  */
+  /* | 34  => {
+    if (
+      getCharCode(index^ + 1) &&
+      getCharCode(index^ + 2)
+    ) {
+
+    } else {
+
+    }
+  } */
   /* # */
   | 35  => {
     /** start after the # char */
@@ -133,13 +147,69 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
 
     Some({ ...currentToken, type_: Comment, end_: position^ })
   }
-  /* ! */
-  | 33  => Some({ ...currentToken, type_: Punctuator(Bang) })
+  /* $ */
+  | 36  => Some({ ...currentToken, type_: Punctuator(Dollar) })
+  /* & */
+  | 38  => Some({ ...currentToken, type_: Ampersand })
+  /* ( */
+  | 40  => Some({ ...currentToken, type_: Punctuator(LeftParen) })
+  /* ) */
+  | 41  => Some({ ...currentToken, type_: Punctuator(RightParen) })
+  /* 46 */
+  | 46 => {
+    if (
+      getCharCode(index^ + 1) === 46 &&
+      getCharCode(index^ + 2) === 46
+    ) {
+      Some({ ...currentToken, type_: Punctuator(Spread) });
+    } else {
+      raise(Invalid_character("Invalid Character Found"));
+    };
+  }
+  | _ when code >= 65 && code <= 122 => {
+    let position = ref(index^);
+
+    let bodyLength = String.length(input^);
+
+    let break = ref(false);
+
+    let code = ref(getCharCode(position^));
+
+    while (
+      position^ !== bodyLength &&
+      code^ !== -1 &&
+      (code^ === 95 || /* _ */
+      (code^ >= 48 && code^ <= 57) || /* 0-9 */
+      (code^ >= 65 && code^ <= 90) || /* A-Z */
+      (code^ >= 97 && code^ <= 122))  /* a-z */
+    ) {
+      code := getCharCode(position^);
+      position := position^ + 1;
+    };
+    Some({ ...currentToken, type_: Name, end_: position^ });
+  }
+  /* | _ when code >= 45 && code <= 57 => {
+
+  } */
+  /* : */
+  | 58 => Some({ ...currentToken, type_: Punctuator(Colon) })
+  /* = */
+  | 61 => Some({ ...currentToken, type_: Punctuator(Equal) })
+  /* @ */
+  | 64 => Some({ ...currentToken, type_: Punctuator(At) })
+  /* [ */
+  | 91 => Some({ ...currentToken, type_: Punctuator(LeftBracket) })
+  /* ] */
+  | 93 => Some({ ...currentToken, type_: Punctuator(RightBracket) })
+  /* { */
   | 123 => Some({ ...currentToken, type_: Punctuator(LeftBrace) })
+  /* | */
+  | 124 => Some({ ...currentToken, type_: Punctuator(Pipe) })
+  /* } */
   | 125 => Some({ ...currentToken, type_: Punctuator(RightBrace) })
+  /* End of file */
   | -1 when index^ === bodyLength => Some({ ...currentToken, type_: EOF }) 
   | -1 => raise(Invalid_character("Invalid Character Found"))
-  | _ => None
   };
 };
 
