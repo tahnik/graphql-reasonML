@@ -68,7 +68,7 @@ let positionAfterWhiteSpace = () => {
 
   let break = ref(false);
 
-  while (!break^ && position^ < bodyLength - 2) {
+  while (!break^ && position^ < bodyLength) {
     let code = try(Char.code(input^.[position^])) {
       | Invalid_argument(_err) => -1
     };
@@ -108,111 +108,111 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
 
   let currentToken = { type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 };
 
-  let code = try(Char.code(input^.[index^])) {
-  | Invalid_argument(_err) => -1
-  };
+  if (index^ === bodyLength) {
+    Some({ ...currentToken, type_: EOF, end_: index^ }) 
+  } else {
+    let code = Char.code(input^.[index^]);
 
-  if (code < 20 && code != 9 && code != 10 && code != 13 && code != -1) {
-    raise(Invalid_character("Invalid character found"));
-  };
+    if (code < 20 && code != 9 && code != 10 && code != 13) {
+      raise(Invalid_character("Invalid character found"));
+    };
 
-  switch(code) {
-  /* ! */
-  | 33 => Some({ ...currentToken, type_: Punctuator(Bang) })
-  /*  */
-  /* | 34  => {
-    if (
-      getCharCode(index^ + 1) &&
-      getCharCode(index^ + 2)
-    ) {
+    switch(code) {
+    /* ! */
+    | 33 => Some({ ...currentToken, type_: Punctuator(Bang) })
+    /*  */
+    /* | 34  => {
+      if (
+        getCharCode(index^ + 1) &&
+        getCharCode(index^ + 2)
+      ) {
 
-    } else {
+      } else {
 
+      }
+    } */
+    /* # */
+    | 35  => {
+      /** start after the # char */
+      let position = ref(index^ + 1);
+
+      /** get the current char code */
+      let code = ref(Char.code(input^.[position^]));
+
+      /** Keep looping until we find the line terminator */
+      while(code^ != -1 && (code^ > 31 || code^ === 9)) {
+        position := position^ + 1;
+        code := Char.code(input^.[position^]);
+      };
+
+      Some({ ...currentToken, type_: Comment, end_: position^ })
     }
-  } */
-  /* # */
-  | 35  => {
-    /** start after the # char */
-    let position = ref(index^ + 1);
+    /* $ */
+    | 36  => Some({ ...currentToken, type_: Punctuator(Dollar) })
+    /* & */
+    | 38  => Some({ ...currentToken, type_: Ampersand })
+    /* ( */
+    | 40  => Some({ ...currentToken, type_: Punctuator(LeftParen) })
+    /* ) */
+    | 41  => Some({ ...currentToken, type_: Punctuator(RightParen) })
+    /* 46 */
+    | 46 => {
+      if (
+        Char.code(input^.[index^ + 1]) === 46 &&
+        Char.code(input^.[index^ + 2]) === 46
+      ) {
+        Some({ ...currentToken, type_: Punctuator(Spread) });
+      } else {
+        raise(Invalid_character("Invalid Character Found"));
+      };
+    }
+    | _ when code >= 65 && code <= 122 => {
+      let position = ref(index^);
 
-    /** get the current char code */
-    let code = ref(Char.code(input^.[position^]));
+      let bodyLength = String.length(input^);
 
-    /** Keep looping until we find the line terminator */
-    while(code^ != -1 && (code^ > 31 || code^ === 9)) {
-      position := position^ + 1;
-      code := Char.code(input^.[position^]);
+      let break = ref(false);
+
+      let code = ref(try(Char.code(input^.[position^])) {
+      | Invalid_argument(_err) => -1
+      });
+
+      while (
+        position^ != bodyLength &&
+        code^ != -1 &&
+        (code^ == 95 || /* _ */
+        (code^ >= 48 && code^ <= 57) || /* 0-9 */
+        (code^ >= 65 && code^ <= 90) || /* A-Z */
+        (code^ >= 97 && code^ <= 122))  /* a-z */
+      ) {
+        code := Char.code(input^.[position^]);
+        position := position^ + 1;
+      };
+      Some({ ...currentToken, type_: Name, end_: position^ });
+    }
+    /* | _ when code >= 45 && code <= 57 => {
+
+    } */
+    /* : */
+    | 58 => Some({ ...currentToken, type_: Punctuator(Colon) })
+    /* = */
+    | 61 => Some({ ...currentToken, type_: Punctuator(Equal) })
+    /* @ */
+    | 64 => Some({ ...currentToken, type_: Punctuator(At) })
+    /* [ */
+    | 91 => Some({ ...currentToken, type_: Punctuator(LeftBracket) })
+    /* ] */
+    | 93 => Some({ ...currentToken, type_: Punctuator(RightBracket) })
+    /* { */
+    | 123 => Some({ ...currentToken, type_: Punctuator(LeftBrace) })
+    /* | */
+    | 124 => Some({ ...currentToken, type_: Punctuator(Pipe) })
+    /* } */
+    | 125 => Some({ ...currentToken, type_: Punctuator(RightBrace) })
+    | _   => raise(Invalid_character("Invalid Character Found"))
     };
-
-    Some({ ...currentToken, type_: Comment, end_: position^ })
   }
-  /* $ */
-  | 36  => Some({ ...currentToken, type_: Punctuator(Dollar) })
-  /* & */
-  | 38  => Some({ ...currentToken, type_: Ampersand })
-  /* ( */
-  | 40  => Some({ ...currentToken, type_: Punctuator(LeftParen) })
-  /* ) */
-  | 41  => Some({ ...currentToken, type_: Punctuator(RightParen) })
-  /* 46 */
-  | 46 => {
-    if (
-      Char.code(input^.[index^ + 1]) === 46 &&
-      Char.code(input^.[index^ + 2]) === 46
-    ) {
-      Some({ ...currentToken, type_: Punctuator(Spread) });
-    } else {
-      raise(Invalid_character("Invalid Character Found"));
-    };
-  }
-  | _ when code >= 65 && code <= 122 => {
-    let position = ref(index^);
 
-    let bodyLength = String.length(input^);
-
-    let break = ref(false);
-
-    let code = ref(try(Char.code(input^.[position^])) {
-    | Invalid_argument(_err) => -1
-    });
-
-    while (
-      position^ != bodyLength &&
-      code^ != -1 &&
-      (code^ == 95 || /* _ */
-      (code^ >= 48 && code^ <= 57) || /* 0-9 */
-      (code^ >= 65 && code^ <= 90) || /* A-Z */
-      (code^ >= 97 && code^ <= 122))  /* a-z */
-    ) {
-      code := Char.code(input^.[position^]);
-      position := position^ + 1;
-    };
-    Some({ ...currentToken, type_: Name, end_: position^ });
-  }
-  /* | _ when code >= 45 && code <= 57 => {
-
-  } */
-  /* : */
-  | 58 => Some({ ...currentToken, type_: Punctuator(Colon) })
-  /* = */
-  | 61 => Some({ ...currentToken, type_: Punctuator(Equal) })
-  /* @ */
-  | 64 => Some({ ...currentToken, type_: Punctuator(At) })
-  /* [ */
-  | 91 => Some({ ...currentToken, type_: Punctuator(LeftBracket) })
-  /* ] */
-  | 93 => Some({ ...currentToken, type_: Punctuator(RightBracket) })
-  /* { */
-  | 123 => Some({ ...currentToken, type_: Punctuator(LeftBrace) })
-  /* | */
-  | 124 => Some({ ...currentToken, type_: Punctuator(Pipe) })
-  /* } */
-  | 125 => Some({ ...currentToken, type_: Punctuator(RightBrace) })
-  /* End of file */
-  | -1 when index^ === bodyLength => Some({ ...currentToken, type_: EOF, end_: index^ }) 
-  | -1 => raise(Invalid_character("Invalid Character Found"))
-  | _ => None
-  };
 };
 
 let setInput = (inputText: string) => {

@@ -1,14 +1,11 @@
 let testLexer = () => {
-  Lexer.setInput("query GetFilmInfo {
-    film1: film(id: \"ZmlsbXM6NA==\") {
-      title
-      director
-      producers
-    }
-    film2: film(id: \"ZmlsbXM6Ng==\") {
-      title
-      director
-      producers
+  Lexer.setInput("title
+  url
+  labels() {
+    edges {
+      node {
+        name
+      }
     }
   }");
   let endOfTokens = ref(false);
@@ -16,7 +13,6 @@ let testLexer = () => {
   while (!endOfTokens^) {
     switch(Lexer.getNextToken(prevToken^)) {
     | Some(token) => {
-        /* Js.log(token); */
         prevToken := Some(token);
         if (token.type_ === EOF) {
           endOfTokens := true;
@@ -27,6 +23,6 @@ let testLexer = () => {
   }
 };
 
-for (index in 0 to 50000) {
+/* for (index in 0 to 50000) { */
   testLexer();
-};
+/* }; */
