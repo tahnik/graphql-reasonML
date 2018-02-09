@@ -49,6 +49,7 @@ let index = ref(0);
 let firstTime = ref(true);
 let input = ref("");
 let line = ref(1);
+let currentToken = ref({ type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 });
 
 let getNextIndex = () => {
   switch firstTime^ {
@@ -95,8 +96,100 @@ let positionAfterWhiteSpace = () => {
   setNextIndex(position^);
 };
 
+let readString = () : int => {
+  let position = ref(index^ + 1);
 
-let getNextToken = (prevToken: option(token)) : option(token) => {
+  let code = ref(Char.code(input^.[position^]));
+
+  let bodyLength = String.length(input^);
+
+  let break = ref(false);
+
+  while (position^ < bodyLength && code^ !== 10 && code^ !== 13 && !break^) {
+    code := Char.code(input^.[position^]);
+    switch(code^) {
+    | 34 => { position := position^ + 1; break := true; }
+    | _ when code^ < 20 && code^ !== 9 => {
+      raise(Invalid_character("Invalid Character Detected"));
+    }
+    | 92 => position := position^ + 1;
+    | _  => position := position^ + 1;
+    };
+  };
+
+  position^;
+};
+
+let readDigits = (startPos) : int => {
+  let position = ref(startPos);
+
+  let code = ref(Char.code(input^.[position^]));
+
+  if (code^ >= 48 && code^ <= 57) {
+    position := position^ + 1;
+    code := Char.code(input^.[position^]);
+
+    while (code^ >= 48 && code^ <= 57) {
+      position := position^ + 1;
+      code := Char.code(input^.[position^]);
+    };
+    position^;
+  } else {
+    raise(Invalid_character("Invalid Character inside digits"));
+  }
+
+};
+
+let readNumber = () : token => {
+  let position = ref(index^);
+
+  let code = ref(Char.code(input^.[position^]));
+
+  let type_ = ref(IntValue);
+
+  if (code^ === 45) {
+    position := position^ + 1;
+    code := Char.code(input^.[position^]);
+  };
+
+  if (code^ === 48) {
+    position := position^ + 1;
+    code := Char.code(input^.[position^]);
+
+    if (code^ >= 48 && code^ <= 57) {
+      raise(Invalid_character("Unexpected Character after 0"));
+    } else {
+      position := readDigits(position^);
+    };
+  };
+
+  if (code^ === 46) {
+    type_ := FloatValue;
+    position := position^ + 1;
+    code := Char.code(input^.[position^]);
+
+    position := readDigits(position^);
+    code := Char.code(input^.[position^]);
+  };
+
+  if (code^ === 69 && code^ === 101) {
+    type_ := FloatValue;
+    position := position^ + 1;
+    code := Char.code(input^.[position^]);
+
+    if (code^ === 43 && code^ === 45) {
+      position := position^ + 1;
+      code := Char.code(input^.[position^]);
+
+      position := readDigits(position^);
+    };
+  };
+
+  { ...currentToken^, type_: type_^, end_: position^ }
+};
+
+
+let getNextToken = (prevToken: option(token)) : token => {
   switch(prevToken) {
   | Some(token) => setNextIndex(token.end_)
   | _ => ()
@@ -106,10 +199,10 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
 
   positionAfterWhiteSpace();
 
-  let currentToken = { type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 };
+  currentToken := { type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 };
 
   if (index^ === bodyLength) {
-    Some({ ...currentToken, type_: EOF, end_: index^ }) 
+    { ...currentToken^, type_: EOF, end_: index^ }
   } else {
     let code = Char.code(input^.[index^]);
 
@@ -119,18 +212,12 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
 
     switch(code) {
     /* ! */
-    | 33 => Some({ ...currentToken, type_: Punctuator(Bang) })
-    /*  */
-    /* | 34  => {
-      if (
-        getCharCode(index^ + 1) &&
-        getCharCode(index^ + 2)
-      ) {
-
-      } else {
-
-      }
-    } */
+    | 33 => { ...currentToken^, type_: Punctuator(Bang) }
+    /* */
+    | 34  => {
+      let end_ = readString();
+      { ...currentToken^, type_: StringValue, end_ }
+    }
     /* # */
     | 35  => {
       /** start after the # char */
@@ -145,27 +232,28 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
         code := Char.code(input^.[position^]);
       };
 
-      Some({ ...currentToken, type_: Comment, end_: position^ })
+      { ...currentToken^, type_: Comment, end_: position^ }
     }
     /* $ */
-    | 36  => Some({ ...currentToken, type_: Punctuator(Dollar) })
+    | 36  => { ...currentToken^, type_: Punctuator(Dollar) }
     /* & */
-    | 38  => Some({ ...currentToken, type_: Ampersand })
+    | 38  => { ...currentToken^, type_: Ampersand }
     /* ( */
-    | 40  => Some({ ...currentToken, type_: Punctuator(LeftParen) })
+    | 40  => { ...currentToken^, type_: Punctuator(LeftParen) }
     /* ) */
-    | 41  => Some({ ...currentToken, type_: Punctuator(RightParen) })
+    | 41  => { ...currentToken^, type_: Punctuator(RightParen) }
     /* 46 */
     | 46 => {
       if (
         Char.code(input^.[index^ + 1]) === 46 &&
         Char.code(input^.[index^ + 2]) === 46
       ) {
-        Some({ ...currentToken, type_: Punctuator(Spread) });
+        { ...currentToken^, type_: Punctuator(Spread) };
       } else {
         raise(Invalid_character("Invalid Character Found"));
       };
     }
+    | _ when code >= 45 && code <= 57 => readNumber()
     | _ when code >= 65 && code <= 122 => {
       let position = ref(index^);
 
@@ -188,27 +276,27 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
         code := Char.code(input^.[position^]);
         position := position^ + 1;
       };
-      Some({ ...currentToken, type_: Name, end_: position^ });
+      { ...currentToken^, type_: Name, end_: position^ - 1 };
     }
     /* | _ when code >= 45 && code <= 57 => {
 
     } */
     /* : */
-    | 58 => Some({ ...currentToken, type_: Punctuator(Colon) })
+    | 58 => { ...currentToken^, type_: Punctuator(Colon) }
     /* = */
-    | 61 => Some({ ...currentToken, type_: Punctuator(Equal) })
+    | 61 => { ...currentToken^, type_: Punctuator(Equal) }
     /* @ */
-    | 64 => Some({ ...currentToken, type_: Punctuator(At) })
+    | 64 => { ...currentToken^, type_: Punctuator(At) }
     /* [ */
-    | 91 => Some({ ...currentToken, type_: Punctuator(LeftBracket) })
+    | 91 => { ...currentToken^, type_: Punctuator(LeftBracket) }
     /* ] */
-    | 93 => Some({ ...currentToken, type_: Punctuator(RightBracket) })
+    | 93 => { ...currentToken^, type_: Punctuator(RightBracket) }
     /* { */
-    | 123 => Some({ ...currentToken, type_: Punctuator(LeftBrace) })
+    | 123 => { ...currentToken^, type_: Punctuator(LeftBrace) }
     /* | */
-    | 124 => Some({ ...currentToken, type_: Punctuator(Pipe) })
+    | 124 => { ...currentToken^, type_: Punctuator(Pipe) }
     /* } */
-    | 125 => Some({ ...currentToken, type_: Punctuator(RightBrace) })
+    | 125 => { ...currentToken^, type_: Punctuator(RightBrace) }
     | _   => raise(Invalid_character("Invalid Character Found"))
     };
   }
