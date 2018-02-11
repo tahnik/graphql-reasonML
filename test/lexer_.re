@@ -22,7 +22,6 @@ let testLexer = () => {
   let prevToken = ref(None);
   while (!endOfTokens^) {
     let token = Lexer.getNextToken(prevToken^);
-    Js.log(token);
     prevToken := Some(token);
     if (token.type_ === EOF) {
       endOfTokens := true;
@@ -30,6 +29,6 @@ let testLexer = () => {
   }
 };
 
-/* for (index in 0 to 50000) { */
+for (index in 0 to 50000) {
   testLexer();
-/* }; */
+};

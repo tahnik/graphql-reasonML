@@ -33,9 +33,7 @@ type token = {
   type_: tokenType,
   line_: int,
   start_: int,
-  end_: int,
-  /* prev_: token, */
-  /* next_: option(token) */
+  end_: int
 };
 
 let ignoredToken = [
@@ -189,7 +187,9 @@ let readNumber = () : token => {
 };
 
 
+
 let getNextToken = (prevToken: option(token)) : token => {
+
   switch(prevToken) {
   | Some(token) => setNextIndex(token.end_)
   | _ => ()
@@ -308,3 +308,13 @@ let setInput = (inputText: string) => {
   index := 0;
 };
 
+
+let advance = () : token => {
+  let prevToken = currentToken^;
+  if (prevToken.type_ === Undetermined) {
+    currentToken := getNextToken(None);
+  } else {
+    currentToken := getNextToken(Some(currentToken^));
+  };
+  currentToken^;
+};
