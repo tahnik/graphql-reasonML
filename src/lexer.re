@@ -318,3 +318,7 @@ let advance = () : token => {
   };
   currentToken^;
 };
+
+let getValue = () => {
+  String.sub(input^, currentToken^.start_, currentToken^.end_);
+};
