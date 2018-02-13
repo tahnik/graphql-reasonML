@@ -85,23 +85,37 @@ let parseOperationType = () => {
   }
 };
 
+let parseSelectionSet = () => {
+  { kind: "Selection Set", fragments: "",  }
+};
+
 let parseOperationDefinition = () : operationDefinition => {
   if (Lexer.currentToken^.type_ === Punctuator(LeftBrace)) {
     {
       kind: "Operation Definition",
       operation: "query",
-      name: None
+      name: None,
+      variableDefinitions: [],
+      directives: [],
+      selectionSets: []
     }
   } else {
     let operation = parseOperationType();
     let name = { kind: "Name", value: Lexer.getValue() };
-    { kind: "Operation Definition", operation: "query", name: Some(name) }
+    {
+      kind: "Operation Definition",
+      operation: "query",
+      name: None,
+      variableDefinitions: [],
+      directives: [],
+      selectionSets: parseSelectionSet()
+    }
   }
 };
 
-let parseFragmentDefinition = () : fragmentDefinition => {
+/* let parseFragmentDefinition = () : fragmentDefinition => {
   { kind: "Fragment Definition", operation: "query", name: None }
-};
+}; */
 
 let parseDefinition = () => {
   let operations = ref([]);
@@ -110,10 +124,7 @@ let parseDefinition = () => {
   | Name => {
     switch(Lexer.getValue()) {
     | "query" | "mutation" => operations := [parseOperationDefinition(), ...operations^];
-    | "fragment" => fragments := [parseFragmentDefinition(), ...fragments^];
-    /* | "schema" | "scalar" | "type" | "interface"
-    | "union" | "enum" | "input" | "extend"
-    | "directive" => parseTypeSystemDefinition() */
+    /* | "fragment" => fragments := [parseFragmentDefinition(), ...fragments^]; */
     | _ => raise(Unexpected_Token("Unexpected Token"))
     };
   }
