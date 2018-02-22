@@ -33,25 +33,28 @@ type namedType = {
 
 type fragment = {
   kind: string,
-  name: string,
+  name: name,
   directives: list(directive),
   selectionSets: list(selectionSet)
 } and field = {
   kind: string,
-  alias: string,
-  name: string,
+  alias: option(string),
+  name: name,
   arguments: list(argument),
   directives: list(directive),
   selectionSet: list(selectionSet)
 } and selectionSet = {
   kind: string,
+  selections: list(selection)
+} and selection = {
   fragments: list(fragment),
   fields: list(field)
 };
 
+
 type fragmentDefinition = {
   kind: string,
-  name: string,
+  name: name,
   condition: namedType,
   directives: list(directive),
   selectionSets: list(selectionSet)
@@ -78,6 +81,10 @@ type document = {
   definitions: list(definition)
 };
 
+let parseMany = (openTok: tokenType, closeTok: tokenType) => {
+   
+};
+
 let parseOperationType = () => {
   switch(Lexer.getValue()) {
   | "query" | "mutation" => Lexer.getValue()
@@ -85,8 +92,37 @@ let parseOperationType = () => {
   }
 };
 
+let parseFragments = () => {
+
+};
+
+let parseField = () => {
+  let name = ref(Lexer.getValue());
+  let alias = ref(None);
+  if (Lexer.advance().type_ === Punctuator(Colon)) {
+    alias := Some( name);
+    if (Lexer.advance().type_ === Name) {
+      name := Lexer.getValue();
+    } else {
+      raise(Unexpected_Token("Expected Name"));
+    };
+  };
+  {
+    kind: "Field",
+    name: { kind: "Name", value: name^ },
+
+  }
+};
+
 let parseSelectionSet = () => {
-  { kind: "Selection Set", fragments: "",  }
+  Lexer.advance();
+  if (Lexer.currentToken^.type_ === Punctuator(Spread)) {
+    { kind: "Selection Set", selections: parseMany(Punctuator(Spread)) };
+  } else if (Lexer.currentToken^.type_ === Name) {
+    { kind: "Selection Set", selections: parseMany() };
+  } else {
+    raise(Unexpected_Token("Expected Name or spread"));
+  };
 };
 
 let parseOperationDefinition = () : operationDefinition => {
@@ -105,7 +141,7 @@ let parseOperationDefinition = () : operationDefinition => {
     {
       kind: "Operation Definition",
       operation: "query",
-      name: None,
+      name,
       variableDefinitions: [],
       directives: [],
       selectionSets: parseSelectionSet()
