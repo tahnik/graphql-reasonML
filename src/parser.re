@@ -16,7 +16,7 @@ type variableDefinition = {
 
 type argument = {
   kind: string,
-  name: string,
+  name: name,
   value: string
 };
 
@@ -92,15 +92,46 @@ let parseOperationType = () => {
   }
 };
 
-let parseFragments = () => {
-
+let parseFragment = () => {
+  []
 };
 
-let parseField = () => {
+let parseValueLiteral = () => {
+  
+};
+
+let parseArguments = () => {
+  switch(Lexer.currentToken^.type_) {
+  | Punctuator(LeftParen) => let _ = Lexer.advance()
+  | Name => ()
+  | _ => raise(Unexpected_Token("Expected Name"))
+  };
+
+  let arguments = ref([]);
+
+  while (Lexer.currentToken^.type_ !== Punctuator(RightParen)) {
+    let name = { kind: "Name", value: Lexer.getValue() };
+    switch(Lexer.advance().type_) {
+    | Punctuator(Colon) => ()
+    | _ => raise(Unexpected_Token("Expected colon"))
+    };
+    let argument = { kind: "Argument", name, value: parseValueLiteral() };
+    arguments := [argument, ...arguments^];
+    Lexer.advance();
+  };
+
+  arguments^
+};
+
+let parseDirective = () => {
+  []
+};
+
+let rec parseField = () => {
   let name = ref(Lexer.getValue());
   let alias = ref(None);
   if (Lexer.advance().type_ === Punctuator(Colon)) {
-    alias := Some( name);
+    alias := Some(name^);
     if (Lexer.advance().type_ === Name) {
       name := Lexer.getValue();
     } else {
@@ -110,19 +141,25 @@ let parseField = () => {
   {
     kind: "Field",
     name: { kind: "Name", value: name^ },
-
+    alias: alias^,
+    arguments: parseArguments(),
+    directives: parseDirective(),
+    selectionSet: parseSelectionSet()
   }
-};
-
-let parseSelectionSet = () => {
+} and parseSelectionSet = () => {
   Lexer.advance();
-  if (Lexer.currentToken^.type_ === Punctuator(Spread)) {
-    { kind: "Selection Set", selections: parseMany(Punctuator(Spread)) };
-  } else if (Lexer.currentToken^.type_ === Name) {
-    { kind: "Selection Set", selections: parseMany() };
-  } else {
-    raise(Unexpected_Token("Expected Name or spread"));
+  let fragments = ref([]);
+  let fields = ref([]);
+  while (Lexer.currentToken^.type_ !== Punctuator(RightBrace)) {
+    if (Lexer.currentToken^.type_ === Punctuator(Spread)) {
+      fragments := [parseFragment(), ...fragments^];
+    } else if (Lexer.currentToken^.type_ === Name) {
+      fields := [parseField(), ...fields^];
+    } else {
+      raise(Unexpected_Token("Expected Name or spread"));
+    };
   };
+  { kind: "Selection Set", selections: { fields: fields^, fragments: fragments^ } }
 };
 
 let parseOperationDefinition = () : operationDefinition => {
@@ -138,6 +175,7 @@ let parseOperationDefinition = () : operationDefinition => {
   } else {
     let operation = parseOperationType();
     let name = { kind: "Name", value: Lexer.getValue() };
+    Lexer.advance();
     {
       kind: "Operation Definition",
       operation: "query",
