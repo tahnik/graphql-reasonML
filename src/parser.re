@@ -7,6 +7,23 @@ type name = {
   value: string
 };
 
+type objectFields = {
+  key: string,
+  value: string
+};
+
+type value = {
+  kind: string,
+  value: string,
+  list: list(string),
+  object_: list(objectFields)
+};
+
+type variable = {
+  kind: string,
+  name: name
+};
+
 type variableDefinition = {
   kind: string,
   variable: string,
@@ -17,35 +34,36 @@ type variableDefinition = {
 type argument = {
   kind: string,
   name: name,
-  value: string
+  value: value
 };
 
 type directive = {
   kind: string,
-  name: string,
+  name: name,
   arguments: list(argument)
 };
 
 type namedType = {
   kind: string,
-  name: string
+  name: name
 };
 
 type fragment = {
   kind: string,
   name: name,
+  condition: option(namedType),
   directives: list(directive),
-  selectionSets: list(selectionSet)
+  selectionSet: option(selectionSet)
 } and field = {
   kind: string,
   alias: option(string),
   name: name,
   arguments: list(argument),
   directives: list(directive),
-  selectionSet: list(selectionSet)
+  selectionSet: selectionSet
 } and selectionSet = {
   kind: string,
-  selections: list(selection)
+  selections: selection
 } and selection = {
   fragments: list(fragment),
   fields: list(field)
@@ -57,7 +75,7 @@ type fragmentDefinition = {
   name: name,
   condition: namedType,
   directives: list(directive),
-  selectionSets: list(selectionSet)
+  selectionSets: selectionSet
 };
 
 type operationDefinition = {
@@ -66,7 +84,7 @@ type operationDefinition = {
   name: option(name),
   variableDefinitions: list(variableDefinition),
   directives: list(directive),
-  selectionSets: list(selectionSet)
+  selectionSets: option(selectionSet)
 };
 
 
@@ -81,9 +99,6 @@ type document = {
   definitions: list(definition)
 };
 
-let parseMany = (openTok: tokenType, closeTok: tokenType) => {
-   
-};
 
 let parseOperationType = () => {
   switch(Lexer.getValue()) {
@@ -92,15 +107,99 @@ let parseOperationType = () => {
   }
 };
 
-let parseFragment = () => {
-  []
+let parseList = () => {
+  let list = ref([]);
+  Lexer.advance();
+  while(Lexer.currentToken^.type_ !== Punctuator(RightBracket)) {
+    list := [Lexer.getValue(), ...list^];
+    Lexer.advance();
+  };
+  { kind: "List", value: "", list: list^, object_: []  }
 };
 
-let parseValueLiteral = () => {
-  
+let parseObject = () => {
+  let objects = ref([]);
+  while(Lexer.currentToken^.type_ === Punctuator(RightBrace)) {
+    Lexer.advance();
+    switch(Lexer.currentToken^.type_) {
+    | Name => ()
+    | _ => raise(Unexpected_Token("Expected Name"))
+    };
+    let key = Lexer.getValue();
+    switch(Lexer.currentToken^.type_) {
+    | Punctuator(Colon) => ()
+    | _ => raise(Unexpected_Token("Expected Name"))
+    };
+    Lexer.advance();
+    switch(Lexer.currentToken^.type_) {
+    | Name => ()
+    | _ => raise(Unexpected_Token("Expected Name"))
+    };
+    let value = Lexer.getValue();
+    objects := [{ key, value}, ...objects^];
+  };
+  { kind: "List", value: "", list: [], object_: objects^ }
 };
 
-let parseArguments = () => {
+
+let rec parseFragment = (): fragment => {
+  Lexer.advance();
+  let kind = ref("Fragment Spread");
+  let selectionSet = ref([]);
+  if (Lexer.currentToken^.type_ === Name && Lexer.getValue() !== "on") {
+    {
+      kind: kind^,
+      condition: None,
+      name: { kind: "Name", value: Lexer.getValue() },
+      directives: parseDirectives(),
+      selectionSet: None
+    }
+  } else {
+    let condition = ref(None);
+    if (Lexer.getValue() === "on") {
+      Lexer.advance() |> ignore;
+      condition := Some({ kind: "Named Type", name: { kind: "Name", value: Lexer.getValue() } });
+    };
+    {
+      kind: "Inline Fragment",
+      condition: condition^,
+      name: { kind: "Name", value: Lexer.getValue() },
+      directives: parseDirectives(),
+      selectionSet: Some(parseSelectionSet())
+    }
+  }
+} and parseDirectives = () => {
+  Lexer.advance();
+  let directives = ref([]);
+  while (Lexer.currentToken^.type_ === Punctuator(At)) {
+    directives := [
+      {
+        kind: "Directive",
+        name: { kind: "Name", value: Lexer.getValue() },
+        arguments: parseArguments()
+      },
+      ...directives^
+    ];
+  };
+  directives^;
+} and parseValueLiteral = () : value => {
+  Lexer.advance();
+  switch (Lexer.currentToken^.type_) {
+  | Punctuator(LeftBracket) => parseList()
+  | Punctuator(LeftBrace) => parseObject()
+  | IntValue => { kind: "Integer", value: Lexer.getValue(), list: [], object_: [] }
+  | FloatValue => { kind: "Float", value: Lexer.getValue(), list: [], object_: [] }
+  | StringValue => { kind: "String", value: Lexer.getValue(), list: [], object_: [] }
+  | Name => {
+    switch(Lexer.getValue()) {
+    | "true" | "false" => { kind: "Boolean", value: Lexer.getValue(), list: [], object_: []  }
+    | "null" => { kind: "null", value: "", list: [], object_: [] }
+    | _ => { kind: "Enum", value: Lexer.getValue(), list: [], object_: []  }
+    }
+  }
+  | Punctuator(Dollar) => { kind: "Variable", value: Lexer.getValue(), list: [], object_: [] }
+  }
+} and parseArguments = () => {
   switch(Lexer.currentToken^.type_) {
   | Punctuator(LeftParen) => let _ = Lexer.advance()
   | Name => ()
@@ -121,13 +220,7 @@ let parseArguments = () => {
   };
 
   arguments^
-};
-
-let parseDirective = () => {
-  []
-};
-
-let rec parseField = () => {
+} and  parseField = () => {
   let name = ref(Lexer.getValue());
   let alias = ref(None);
   if (Lexer.advance().type_ === Punctuator(Colon)) {
@@ -143,10 +236,10 @@ let rec parseField = () => {
     name: { kind: "Name", value: name^ },
     alias: alias^,
     arguments: parseArguments(),
-    directives: parseDirective(),
+    directives: parseDirectives(),
     selectionSet: parseSelectionSet()
   }
-} and parseSelectionSet = () => {
+} and parseSelectionSet = (): selectionSet => {
   Lexer.advance();
   let fragments = ref([]);
   let fields = ref([]);
@@ -170,19 +263,21 @@ let parseOperationDefinition = () : operationDefinition => {
       name: None,
       variableDefinitions: [],
       directives: [],
-      selectionSets: []
+      selectionSets: None
     }
   } else {
     let operation = parseOperationType();
-    let name = { kind: "Name", value: Lexer.getValue() };
     Lexer.advance();
+    let name = Some({ kind: "Name", value: Lexer.getValue() });
+    Js.log(Lexer.currentToken^.type_);
+    Js.log(Lexer.getValue());
     {
       kind: "Operation Definition",
       operation: "query",
       name,
       variableDefinitions: [],
       directives: [],
-      selectionSets: parseSelectionSet()
+      selectionSets: Some(parseSelectionSet())
     }
   }
 };
