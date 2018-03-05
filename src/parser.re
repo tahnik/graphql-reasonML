@@ -60,7 +60,7 @@ type fragment = {
   name: name,
   arguments: list(argument),
   directives: list(directive),
-  selectionSet: selectionSet
+  selectionSet: option(selectionSet)
 } and selectionSet = {
   kind: string,
   selections: selection
@@ -165,11 +165,13 @@ let rec parseFragment = (): fragment => {
       condition: condition^,
       name: { kind: "Name", value: Lexer.getValue() },
       directives: parseDirectives(),
-      selectionSet: Some(parseSelectionSet())
+      selectionSet: parseSelectionSet()
     }
   }
 } and parseDirectives = () => {
   Lexer.advance();
+  /* Js.log("DIRECTIVES"); */
+  /* Js.log(Lexer.getValue()); */
   let directives = ref([]);
   while (Lexer.currentToken^.type_ === Punctuator(At)) {
     directives := [
@@ -180,6 +182,9 @@ let rec parseFragment = (): fragment => {
       },
       ...directives^
     ];
+  };
+  if (List.length(directives^) == 0) {
+    Lexer.back();
   };
   directives^;
 } and parseValueLiteral = () : value => {
@@ -200,37 +205,57 @@ let rec parseFragment = (): fragment => {
   | Punctuator(Dollar) => { kind: "Variable", value: Lexer.getValue(), list: [], object_: [] }
   }
 } and parseArguments = () => {
+  let noArgs = ref(false);
+  Lexer.advance();
   switch(Lexer.currentToken^.type_) {
   | Punctuator(LeftParen) => let _ = Lexer.advance()
-  | Name => ()
-  | _ => raise(Unexpected_Token("Expected Name"))
+  | _ => noArgs := true;
   };
 
-  let arguments = ref([]);
+  /* Js.log("ARGUMENTS"); */
+  /* Js.log(Lexer.getValue()); */
 
-  while (Lexer.currentToken^.type_ !== Punctuator(RightParen)) {
-    let name = { kind: "Name", value: Lexer.getValue() };
-    switch(Lexer.advance().type_) {
-    | Punctuator(Colon) => ()
-    | _ => raise(Unexpected_Token("Expected colon"))
+  switch (noArgs^) {
+  | true => {
+    Lexer.back();
+    []
+  }
+  | false => {
+    let arguments = ref([]);
+
+    while (Lexer.currentToken^.type_ != Punctuator(RightParen)) {
+      let name = { kind: "Name", value: Lexer.getValue() };
+      Lexer.advance();
+      switch(Lexer.currentToken^.type_) {
+      | Punctuator(Colon) => ()
+      | _ => raise(Unexpected_Token("Expected colon"))
+      };
+      let argument = { kind: "Argument", name, value: parseValueLiteral() };
+      arguments := [argument, ...arguments^];
+      Lexer.advance();
     };
-    let argument = { kind: "Argument", name, value: parseValueLiteral() };
-    arguments := [argument, ...arguments^];
-    Lexer.advance();
+
+    arguments^
+  };
   };
 
-  arguments^
 } and  parseField = () => {
   let name = ref(Lexer.getValue());
   let alias = ref(None);
-  if (Lexer.advance().type_ === Punctuator(Colon)) {
+  Lexer.advance();
+  if (Lexer.currentToken^.type_ == Punctuator(Colon)) {
     alias := Some(name^);
-    if (Lexer.advance().type_ === Name) {
+    if (Lexer.advance().type_ == Name) {
       name := Lexer.getValue();
     } else {
       raise(Unexpected_Token("Expected Name"));
     };
+  } else {
+    Lexer.back();
   };
+  /* Js.log(""); */
+  /* Js.log("Field"); */
+  /* Js.log(name^); */
   {
     kind: "Field",
     name: { kind: "Name", value: name^ },
@@ -239,20 +264,35 @@ let rec parseFragment = (): fragment => {
     directives: parseDirectives(),
     selectionSet: parseSelectionSet()
   }
-} and parseSelectionSet = (): selectionSet => {
+} and parseSelectionSet = (): option(selectionSet) => {
   Lexer.advance();
-  let fragments = ref([]);
-  let fields = ref([]);
-  while (Lexer.currentToken^.type_ !== Punctuator(RightBrace)) {
-    if (Lexer.currentToken^.type_ === Punctuator(Spread)) {
-      fragments := [parseFragment(), ...fragments^];
-    } else if (Lexer.currentToken^.type_ === Name) {
-      fields := [parseField(), ...fields^];
-    } else {
-      raise(Unexpected_Token("Expected Name or spread"));
-    };
+  let noSelectionSet = ref(false);
+  if (Lexer.currentToken^.type_ != Punctuator(LeftBrace)) {
+    noSelectionSet := true;
   };
-  { kind: "Selection Set", selections: { fields: fields^, fragments: fragments^ } }
+  /* Js.log("SELECTION SET"); */
+  /* Js.log(Lexer.getValue()); */
+  if (noSelectionSet^ == true) {
+    /* Js.log("Going back"); */
+    Lexer.back();
+    /* Js.log(Lexer.getValue()); */
+    None;
+  } else {
+    Lexer.advance();
+    let fragments = ref([]);
+    let fields = ref([]);
+    while (Lexer.currentToken^.type_ != Punctuator(RightBrace)) {
+      if (Lexer.currentToken^.type_ == Punctuator(Spread)) {
+        fragments := [parseFragment(), ...fragments^];
+      } else if (Lexer.currentToken^.type_ == Name) {
+        fields := [parseField(), ...fields^];
+      } else {
+        raise(Unexpected_Token("Expected Name or spread"));
+      };
+      Lexer.advance();
+    };
+    Some({ kind: "Selection Set", selections: { fields: fields^, fragments: fragments^ } })
+  }
 };
 
 let parseOperationDefinition = () : operationDefinition => {
@@ -269,15 +309,13 @@ let parseOperationDefinition = () : operationDefinition => {
     let operation = parseOperationType();
     Lexer.advance();
     let name = Some({ kind: "Name", value: Lexer.getValue() });
-    Js.log(Lexer.currentToken^.type_);
-    Js.log(Lexer.getValue());
     {
       kind: "Operation Definition",
       operation: "query",
       name,
       variableDefinitions: [],
       directives: [],
-      selectionSets: Some(parseSelectionSet())
+      selectionSets: parseSelectionSet()
     }
   }
 };
@@ -300,6 +338,7 @@ let parseDefinition = () => {
   | Punctuator(LeftBrace) => operations := [parseOperationDefinition(), ...operations^];
   | _ => raise(Unexpected_Token("Unexpected Token"))
   };
+  /* Js.log({ kind: "Definition", operations: operations^, fragments: fragments^ }); */
   { kind: "Definition", operations: operations^, fragments: fragments^ }
 };
 
@@ -314,7 +353,7 @@ let parseDocument = () : document => {
 
 let parse = () => {
   Lexer.setInput("query GetCityEvents {
-    getCity(id: \"id-for-san-francisco\") {
+    getCity(newLine: \"id-for-san-francisco\") {
       id
       name
       events {

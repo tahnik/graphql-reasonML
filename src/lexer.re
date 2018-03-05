@@ -48,6 +48,7 @@ let firstTime = ref(true);
 let input = ref("");
 let line = ref(1);
 let currentToken = ref({ type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 });
+let previousToken = ref(None);
 
 let getNextIndex = () => {
   switch firstTime^ {
@@ -191,9 +192,13 @@ let readNumber = () : token => {
 let getNextToken = (prevToken: option(token)) : token => {
 
   switch(prevToken) {
-  | Some(token) => setNextIndex(token.end_)
+  | Some(token) => {
+    setNextIndex(token.end_);
+    previousToken := prevToken;
+  }
   | _ => ()
   };
+
 
   let bodyLength = String.length(input^);
 
@@ -274,6 +279,8 @@ let getNextToken = (prevToken: option(token)) : token => {
         (code^ >= 97 && code^ <= 122))  /* a-z */
       ) {
         code := Char.code(input^.[position^]);
+        /* Js.log(String.sub(input^, currentToken^.start_, position^ - currentToken^.start_));
+        Js.log(code^); */
         position := position^ + 1;
       };
       { ...currentToken^, type_: Name, end_: position^ - 1 };
@@ -319,6 +326,12 @@ let advance = () : token => {
   currentToken^;
 };
 
+let back = () => {
+  switch(previousToken^) {
+  | Some(token) => currentToken := token;
+  }
+};
+
 let getValue = () => {
-  String.sub(input^, currentToken^.start_, currentToken^.end_);
+  String.sub(input^, currentToken^.start_, currentToken^.end_ - currentToken^.start_);
 };
