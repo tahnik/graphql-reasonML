@@ -50,15 +50,6 @@ let firstTime = ref(true);
 let input = ref("");
 let line = ref(1);
 
-let getCharCode =  (position: int) : int => {
-  let tokenVal = try(String.sub(input^, position, 1)) {
-  | Invalid_argument(_err) => ""
-  };
-  try(Char.code(tokenVal.[0])) {
-  | Invalid_argument(_err) => -1
-  }
-};
-
 let getNextIndex = () => {
   switch firstTime^ {
     | true => { firstTime := false; index^; }
@@ -66,22 +57,31 @@ let getNextIndex = () => {
   };
 };
 
-let positionAfterWhiteSpace = (start: int) : int => {
-  let position = ref(start);
+let setNextIndex = (nextIndex: int) => {
+  index := nextIndex;
+};
+
+let positionAfterWhiteSpace = () => {
+  let position = ref(index^);
 
   let bodyLength = String.length(input^);
 
   let break = ref(false);
 
-  while (!break^) {
-    let code = getCharCode(position^);
-    if (code === 9 || code === 32 || code === 44) {
+  while (!break^ && position^ < bodyLength - 2) {
+    let code = try(Char.code(input^.[position^])) {
+      | Invalid_argument(_err) => -1
+    };
+    if (code == 9 || code == 32 || code == 44) {
       position := position^ + 1;
-    } else if (code === 10) {
+    } else if (code == 10) {
       position := position^ + 1;
       line := line^ + 1;
-    } else if ( code === 13) {
-      if (getCharCode(position^ + 1) === 10) {
+    } else if (code == 13) {
+      let code = try(Char.code(input^.[position^ + 1])) {
+        | Invalid_argument(_err) => -1
+      };
+      if (code == 10) {
         position := position^ + 2
       } else {
         position := position^ + 1;
@@ -92,12 +92,9 @@ let positionAfterWhiteSpace = (start: int) : int => {
     }
   };
 
-  position^;
+  setNextIndex(position^);
 };
 
-let setNextIndex = (nextIndex: int) => {
-  index := nextIndex;
-};
 
 let getNextToken = (prevToken: option(token)) : option(token) => {
   switch(prevToken) {
@@ -105,15 +102,17 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
   | _ => ()
   };
 
-  setNextIndex(positionAfterWhiteSpace(index^));
+  let bodyLength = String.length(input^);
+
+  positionAfterWhiteSpace();
 
   let currentToken = { type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 };
 
-  let code = getCharCode(index^);
+  let code = try(Char.code(input^.[index^])) {
+  | Invalid_argument(_err) => -1
+  };
 
-  let bodyLength = String.length(input^);
-
-  if (code < 20 && code !== 9 && code !== 10 && code !== 13 && code !== -1) {
+  if (code < 20 && code != 9 && code != 10 && code != 13 && code != -1) {
     raise(Invalid_character("Invalid character found"));
   };
 
@@ -137,12 +136,12 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
     let position = ref(index^ + 1);
 
     /** get the current char code */
-    let code = ref(getCharCode(position^));
+    let code = ref(Char.code(input^.[position^]));
 
     /** Keep looping until we find the line terminator */
     while(code^ != -1 && (code^ > 31 || code^ === 9)) {
       position := position^ + 1;
-      code := getCharCode(position^);
+      code := Char.code(input^.[position^]);
     };
 
     Some({ ...currentToken, type_: Comment, end_: position^ })
@@ -158,8 +157,8 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
   /* 46 */
   | 46 => {
     if (
-      getCharCode(index^ + 1) === 46 &&
-      getCharCode(index^ + 2) === 46
+      Char.code(input^.[index^ + 1]) === 46 &&
+      Char.code(input^.[index^ + 2]) === 46
     ) {
       Some({ ...currentToken, type_: Punctuator(Spread) });
     } else {
@@ -173,17 +172,19 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
 
     let break = ref(false);
 
-    let code = ref(getCharCode(position^));
+    let code = ref(try(Char.code(input^.[position^])) {
+    | Invalid_argument(_err) => -1
+    });
 
     while (
-      position^ !== bodyLength &&
-      code^ !== -1 &&
-      (code^ === 95 || /* _ */
+      position^ != bodyLength &&
+      code^ != -1 &&
+      (code^ == 95 || /* _ */
       (code^ >= 48 && code^ <= 57) || /* 0-9 */
       (code^ >= 65 && code^ <= 90) || /* A-Z */
       (code^ >= 97 && code^ <= 122))  /* a-z */
     ) {
-      code := getCharCode(position^);
+      code := Char.code(input^.[position^]);
       position := position^ + 1;
     };
     Some({ ...currentToken, type_: Name, end_: position^ });
@@ -208,8 +209,9 @@ let getNextToken = (prevToken: option(token)) : option(token) => {
   /* } */
   | 125 => Some({ ...currentToken, type_: Punctuator(RightBrace) })
   /* End of file */
-  | -1 when index^ === bodyLength => Some({ ...currentToken, type_: EOF }) 
+  | -1 when index^ === bodyLength => Some({ ...currentToken, type_: EOF, end_: index^ }) 
   | -1 => raise(Invalid_character("Invalid Character Found"))
+  | _ => None
   };
 };
 
