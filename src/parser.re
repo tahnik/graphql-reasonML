@@ -351,26 +351,8 @@ let parseDocument = () : document => {
   { kind: "Document", definitions: definitions^ };
 };
 
-let parse = () => {
-  Lexer.setInput("query GetCityEvents {
-    getCity(newLine: \"id-for-san-francisco\") {
-      id
-      name
-      events {
-        edges {
-          node {
-            id
-            name
-            date
-            sport {
-              id
-              name
-            }
-          }
-        }
-      }
-    }
-  }");
+let parse = (input: string) => {
+  Lexer.setInput(input);
 
   parseDocument();
 };
