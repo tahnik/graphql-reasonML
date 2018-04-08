@@ -30,6 +30,40 @@ let test2 = "query GetCityEvents {
   }
 }";
 
+let test3 = "query FootballEventsInSeattle {
+  viewer {
+    allEvents(where: {
+      date: {
+        gt: \"2017\"
+      },
+      city: {
+        name: {
+          eq: \"Seattle\"
+        }
+      },
+      sport: {
+        name: {
+          eq: \"Football\"
+        }
+      }
+    }) {
+      edges {
+        node {
+          id
+          name
+          sport {
+            id
+            name
+          }
+        }
+      }
+      aggregations {
+        count
+      }
+    }
+  }
+}";
+
 for (index in 0 to 50000) {
-  Parser.parse(test2);
+  Parser.parse(test3);
 };

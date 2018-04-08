@@ -207,6 +207,7 @@ let rec parseFragment = (): fragment => {
 } and parseArguments = () => {
   let noArgs = ref(false);
   Lexer.advance();
+  Js.log(Lexer.getValue());
   switch(Lexer.currentToken^.type_) {
   | Punctuator(LeftParen) => let _ = Lexer.advance()
   | _ => noArgs := true;
@@ -226,6 +227,7 @@ let rec parseFragment = (): fragment => {
     while (Lexer.currentToken^.type_ != Punctuator(RightParen)) {
       let name = { kind: "Name", value: Lexer.getValue() };
       Lexer.advance();
+      /* Js.log(Lexer.getValue()); */
       switch(Lexer.currentToken^.type_) {
       | Punctuator(Colon) => ()
       | _ => raise(Unexpected_Token("Expected colon"))
