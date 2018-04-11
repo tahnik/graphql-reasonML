@@ -4,7 +4,7 @@
   "description": "A GraphQL Compiler Using Reason",
   "main": "index.js",
   "dependencies": {
-    "bs-platform": "^2.1.0",
+    "bs-platform": "^2.2.3",
     "performance-now": "^2.1.0"
   },
   "devDependencies": {},

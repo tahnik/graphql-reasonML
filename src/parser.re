@@ -9,14 +9,13 @@ type name = {
 
 type objectFields = {
   key: string,
-  value: string
-};
-
-type value = {
+  value: string,
+  nestedObj: option(value)
+} and value = {
   kind: string,
   value: string,
   list: list(string),
-  object_: list(objectFields)
+  object_: list(objectFields),
 };
 
 type variable = {
@@ -114,35 +113,60 @@ let parseList = () => {
     list := [Lexer.getValue(), ...list^];
     Lexer.advance();
   };
-  { kind: "List", value: "", list: list^, object_: []  }
+  { kind: "List", value: "", list: list^, object_: [] }
 };
 
-let parseObject = () => {
+let rec parseObject = () => {
+  Js.log("parseObject");
+  Lexer.advance();
+  Js.log(Lexer.getValue());
   let objects = ref([]);
-  while(Lexer.currentToken^.type_ === Punctuator(RightBrace)) {
-    Lexer.advance();
+  let isNested = ref(false);
+  while(Lexer.currentToken^.type_ != Punctuator(RightBrace)) {
     switch(Lexer.currentToken^.type_) {
-    | Name => ()
+    | Name => {
+      Js.log("Key: " ++ Lexer.getValue());
+      let key = Lexer.getValue();
+      Lexer.advance();
+      switch(Lexer.currentToken^.type_) {
+      | Punctuator(Colon) => ()
+      | _ => raise(Unexpected_Token("Expected Colon"))
+      };
+      Lexer.advance();
+      isNested := false;
+      switch(Lexer.currentToken^.type_) {
+      | Name | StringValue => ()
+      | Punctuator(LeftBrace) => { isNested := true; Lexer.back() }
+      | _ => raise(Unexpected_Token("Expected Name or Leftbrace"))
+      };
+
+      switch(isNested^) {
+      | true => {
+        objects := [{ key, value: "", nestedObj: Some(parseValueLiteral()) }, ...objects^];
+        Js.log("Value after nesting: " ++ Lexer.getValue());
+        let _notUsed = Lexer.advance();
+      }
+      | false => {
+        let value = Lexer.getValue();
+        Js.log("Value is: " ++ Lexer.getValue());
+        Lexer.advance();
+        Js.log("Value after not nesting: " ++ Lexer.getValue());
+        objects := [{ key, value, nestedObj: None }, ...objects^]
+      }
+      };
+    }
+    | Punctuator(RightBrace) => ()
+    | Punctuator(RightParen) => ()
     | _ => raise(Unexpected_Token("Expected Name"))
     };
-    let key = Lexer.getValue();
-    switch(Lexer.currentToken^.type_) {
-    | Punctuator(Colon) => ()
-    | _ => raise(Unexpected_Token("Expected Name"))
-    };
-    Lexer.advance();
-    switch(Lexer.currentToken^.type_) {
-    | Name => ()
-    | _ => raise(Unexpected_Token("Expected Name"))
-    };
-    let value = Lexer.getValue();
-    objects := [{ key, value}, ...objects^];
   };
-  { kind: "List", value: "", list: [], object_: objects^ }
-};
-
-
-let rec parseFragment = (): fragment => {
+  Js.log("Exiting While in parseObject");
+  Js.log(Array.of_list(objects^));
+  /* switch(objects^) {
+  | [a, ...rest] => Js.log(rest)
+  }; */
+  { kind: "Object", value: "", list: [], object_: objects^ }
+} and parseFragment = (): fragment => {
   Lexer.advance();
   let kind = ref("Fragment Spread");
   let selectionSet = ref([]);
@@ -189,6 +213,8 @@ let rec parseFragment = (): fragment => {
   directives^;
 } and parseValueLiteral = () : value => {
   Lexer.advance();
+  Js.log("parseValueLiteral");
+  Js.log(Lexer.getValue());
   switch (Lexer.currentToken^.type_) {
   | Punctuator(LeftBracket) => parseList()
   | Punctuator(LeftBrace) => parseObject()
@@ -197,9 +223,9 @@ let rec parseFragment = (): fragment => {
   | StringValue => { kind: "String", value: Lexer.getValue(), list: [], object_: [] }
   | Name => {
     switch(Lexer.getValue()) {
-    | "true" | "false" => { kind: "Boolean", value: Lexer.getValue(), list: [], object_: []  }
+    | "true" | "false" => { kind: "Boolean", value: Lexer.getValue(), list: [], object_: [] }
     | "null" => { kind: "null", value: "", list: [], object_: [] }
-    | _ => { kind: "Enum", value: Lexer.getValue(), list: [], object_: []  }
+    | _ => { kind: "Enum", value: Lexer.getValue(), list: [], object_: [] }
     }
   }
   | Punctuator(Dollar) => { kind: "Variable", value: Lexer.getValue(), list: [], object_: [] }
@@ -207,14 +233,13 @@ let rec parseFragment = (): fragment => {
 } and parseArguments = () => {
   let noArgs = ref(false);
   Lexer.advance();
-  Js.log(Lexer.getValue());
   switch(Lexer.currentToken^.type_) {
   | Punctuator(LeftParen) => let _ = Lexer.advance()
   | _ => noArgs := true;
   };
 
-  /* Js.log("ARGUMENTS"); */
-  /* Js.log(Lexer.getValue()); */
+  Js.log("ARGUMENTS");
+  Js.log(Lexer.getValue());
 
   switch (noArgs^) {
   | true => {
@@ -224,8 +249,10 @@ let rec parseFragment = (): fragment => {
   | false => {
     let arguments = ref([]);
 
+    Js.log("Going Inside Args");
     while (Lexer.currentToken^.type_ != Punctuator(RightParen)) {
       let name = { kind: "Name", value: Lexer.getValue() };
+      Js.log("Name: " ++ name.value);
       Lexer.advance();
       /* Js.log(Lexer.getValue()); */
       switch(Lexer.currentToken^.type_) {
@@ -234,14 +261,18 @@ let rec parseFragment = (): fragment => {
       };
       let argument = { kind: "Argument", name, value: parseValueLiteral() };
       arguments := [argument, ...arguments^];
+      Js.log("Argument Future Value: " ++ Lexer.getValue());
       Lexer.advance();
+      /* if (Lexer.currentToken^.type_ != Punctuator(Colon)) {
+        Lexer.back();
+      } */
     };
-
+    Js.log("Finished Parsing Argument");
     arguments^
   };
   };
 
-} and  parseField = () => {
+} and parseField = () => {
   let name = ref(Lexer.getValue());
   let alias = ref(None);
   Lexer.advance();
