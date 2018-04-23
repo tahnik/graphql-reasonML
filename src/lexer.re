@@ -1,5 +1,17 @@
+/**
+ * Lexer
+ * 
+ * This module is responsible for breaking down the input into tokens
+ */
+
+
+/** This is the exception that is generated if there is a token is not valid */
 exception Invalid_character(string);
 
+/**
+ * All the valid tokens for GraphQl Language
+ * Can be found here: http://facebook.github.io/graphql/October2016/#sec-Language
+ */
 type punctuators = 
   | Bang
   | Dollar
@@ -36,6 +48,7 @@ type token = {
   end_: int
 };
 
+/** These tokens are ignored if they appear in input */
 let ignoredToken = [
   WhiteSpace,
   LineTerminator,
@@ -50,6 +63,8 @@ let line = ref(1);
 let currentToken = ref({ type_: Undetermined, line_: line^, start_: index^, end_: index^ + 1 });
 let previousToken = ref(None);
 
+
+/** Get the next index in the input */
 let getNextIndex = () => {
   switch firstTime^ {
     | true => { firstTime := false; index^; }
@@ -57,10 +72,12 @@ let getNextIndex = () => {
   };
 };
 
+/** Sets the next input if necessary */
 let setNextIndex = (nextIndex: int) => {
   index := nextIndex;
 };
 
+/** Skips whitespace and moves to the next token */
 let positionAfterWhiteSpace = () => {
   let position = ref(index^);
 
@@ -188,7 +205,7 @@ let readNumber = () : token => {
 };
 
 
-
+/** Gets the next token in the input */
 let getNextToken = (prevToken: option(token)) : token => {
 
   switch(prevToken) {
@@ -310,12 +327,14 @@ let getNextToken = (prevToken: option(token)) : token => {
 
 };
 
+/** Set the input that will be broken down to tokens */
 let setInput = (inputText: string) => {
   input := inputText;
   index := 0;
 };
 
 
+/** Advances to the next token in the token stream */
 let advance = () : token => {
   let prevToken = currentToken^;
   if (prevToken.type_ === Undetermined) {
@@ -326,12 +345,14 @@ let advance = () : token => {
   currentToken^;
 };
 
+/** Goes back into the token stream */
 let back = () => {
   switch(previousToken^) {
   | Some(token) => currentToken := token;
   }
 };
 
+/** Get the value of the current token */
 let getValue = () => {
   String.sub(input^, currentToken^.start_, currentToken^.end_ - currentToken^.start_);
 };
