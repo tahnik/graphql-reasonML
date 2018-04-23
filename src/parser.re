@@ -1,7 +1,19 @@
+/**
+ * Parser
+ * 
+ * This modules is responsible for parsing the input
+ */
+
 open Lexer;
 
+/** The exeception generated if the syntax of the code is wrong */
 exception Unexpected_Token(string);
 
+/**
+ * The intermediate representation of GraphQL query
+ * 
+ * All the possible types of GraphQL is defined here.
+ */
 type name = {
   kind: string,
   value: string
@@ -99,6 +111,9 @@ type document = {
 };
 
 
+/**
+ * Each function here is responsible for parsing different types in the input
+ */
 let parseOperationType = () => {
   switch(Lexer.getValue()) {
   | "query" | "mutation" => Lexer.getValue()
